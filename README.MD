@@ -1,5 +1,5 @@
 - Go to the directory "pet"
-- Add two new directories, "raw" and "processed"
+- Run command "./setup.sh"
 - Run command "python upload.py"
 
 Watch the audio test stream get chunked and placed into the "raw" directory.
