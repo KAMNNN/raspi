@@ -7,10 +7,23 @@ from datetime import datetime
 import RPi.GPIO as GPIO
 from random import random
 
+import subprocess
+import time
+import logging
+import os
+import shutil
+from os import path
+
 import requests
 import logging
 import boto3
 from botocore.exceptions import ClientError
+
+logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                    level=logging.DEBUG,
+                    datefmt='%Y-%m-%d %H:%M:%S')
+RUN_PATH = path.dirname(path.abspath(__file__)) + "/"
+
 
 LedPin_1 = 36
 LedPin_2 = 35
@@ -76,13 +89,16 @@ def create_session():
     if(not active_session):
         active_session = True 
         session_id = ""
+        
+        ##AWS STUFF
         PARAMS = {'session_id': session_id} 
         r = requests.get(url = KAMN_API_URL, params = PARAMS)
         data = r.json()
         logging.info(data)
-        
-        
         print(str(data) + "t\n")
+        ##
+        
+       
         global LedPin_1
         global p 
         p.ChangeDutyCycle(100)
@@ -99,6 +115,11 @@ def start_stop_session():
         p.ChangeDutyCycle(20)
         g.ChangeDutyCycle(0)
         session_started = True
+        
+        ##starting audio capture
+        logging.info("Starting audio capture.")
+        subprocess.call(RUN_PATH + "start_capture.sh")
+        
         ##look in KAMN-API-DATA-TIER index.js create 
         ##set session id 
         return True
@@ -108,6 +129,10 @@ def start_stop_session():
         g.ChangeDutyCycle(20)
         session_started = False 
         active_session = False
+        
+        ##end session
+        subprocess.call(RUN_PATH + 'stop_capture.sh')
+        
         return False
     else:#session was not active --> do nothing
         session_id = ""
@@ -143,7 +168,14 @@ def loop():
             
             lcd.message(getdisp_1() + '\n')
             lcd.message(getdisp_2() + '\n')   # display the tim
-                
+            
+            if(session_started == True)    
+            {
+                files_cnt = len(os.listdir(RUN_PATH + "raw"))
+                if files_cnt > 0:
+                process(index)
+                index += 1
+            }
             sleep(.3)
         except KeyboardInterrupt:
             exit(1)
@@ -181,6 +213,10 @@ except:
 		exit(1)
 # Create LCD, passing in MCP GPIO adapter.
 lcd = Adafruit_CharLCD(pin_rs=0, pin_e=2, pins_db=[4,5,6,7], GPIO=mcp)
+
+def process(chunk):
+    file_name = "chunk" + str(chunk) + ".flac"
+    shutil.move(RUN_PATH + "raw/" + file_name, RUN_PATH + "processed/" + file_name)
 
 if __name__ == '__main__':
     print ('Program is starting ... ')

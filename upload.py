@@ -19,9 +19,13 @@ def process(chunk):
 
 logging.info("Starting audio capture.")
 subprocess.call(RUN_PATH + "start_capture.sh")
+
+
 index = 0
 for i in range(15):
+    
     files_cnt = len(os.listdir(RUN_PATH + "raw"))
+    
     if files_cnt > 0:
         process(index)
         index += 1
